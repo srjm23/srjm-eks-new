@@ -1,0 +1,16 @@
+# ignora tudo
+*
+
+# mas não ignora diretórios (senão não consegue descer até os arquivos)
+!*/
+
+# permite Terraform
+!*.tf
+
+# permite YAML
+!*.yaml
+!*.yml
+
+# (opcional) mantém arquivos básicos do repo
+!.gitignore
+!README.md

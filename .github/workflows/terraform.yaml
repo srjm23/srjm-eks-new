@@ -1,0 +1,121 @@
+name: Terraform DevSecOps Deploy
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Selecione uma ação para executar na Infraestrutura Terraform"
+        required: true
+        type: choice
+        options:
+          - apply
+          - destroy
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+concurrency:
+  group: terraform-production
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_VAR_eks_public_access_cidr: ${{ secrets.EKS_PUBLIC_ACCESS_CIDR }}
+
+jobs:
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v6
+
+      - name: Configurar credenciais AWS via OIDC
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Instalar Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.8.5
+
+      - name: Instalar Checkov
+        run: pip install checkov
+
+      - name: Verificar formatação Terraform
+        run: terraform fmt -check -recursive
+
+      - name: Varredura DevSecOps com Checkov
+        run: checkov -d . --framework terraform || true
+
+      - name: Inicializar Terraform com backend S3
+        run: terraform init -input=false
+
+      - name: Validar Terraform
+        run: terraform validate
+
+      - name: Executar Terraform Plan
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Salvar plano
+        uses: actions/upload-artifact@v7
+        with:
+          name: tfplan
+          path: tfplan
+
+  terraform-actions:
+    name: Terraform Apply or Destroy
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && (github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy')
+    needs: terraform-plan
+
+    environment:
+      name: production
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v6
+
+      - name: Configurar credenciais AWS via OIDC
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Instalar Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.8.5
+
+      - name: Baixar plano aprovado
+        uses: actions/download-artifact@v8
+        with:
+          name: tfplan
+
+      - name: Inicializar Terraform com backend S3
+        run: terraform init -input=false
+
+      - name: Exibir plano de aplicação
+        if: github.event.inputs.action == 'apply'
+        run: terraform show -no-color tfplan
+
+      - name: Aplicar infraestrutura
+        if: github.event.inputs.action == 'apply'
+        run: terraform apply -input=false -auto-approve tfplan
+
+      - name: Gerar plano de destruição
+        if: github.event.inputs.action == 'destroy'
+        run: terraform plan -destroy -input=false -out=destroy.tfplan
+
+      - name: Destruir infraestrutura
+        if: github.event.inputs.action == 'destroy'
+        run: terraform apply -input=false -auto-approve destroy.tfplan
