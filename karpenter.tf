@@ -315,54 +315,54 @@ resource "aws_eks_access_entry" "karpenter_nodes" {
   type          = "EC2_LINUX"
 }
 
-# resource "helm_release" "karpenter_crd" {
-#   name             = "karpenter-crd"
-#   namespace        = "karpenter"
-#   create_namespace = true
-#   repository       = "oci://public.ecr.aws/karpenter"
-#   chart            = "karpenter-crd"
-#   version          = var.karpenter_version
-#   wait             = true
+resource "helm_release" "karpenter_crd" {
+  name             = "karpenter-crd"
+  namespace        = "karpenter"
+  create_namespace = true
+  repository       = "oci://public.ecr.aws/karpenter"
+  chart            = "karpenter-crd"
+  version          = var.karpenter_version
+  wait             = true
 
-#   depends_on = [aws_eks_node_group.workers]
-# }
+  depends_on = [aws_eks_node_group.workers]
+}
 
-# resource "helm_release" "karpenter" {
-#   name             = "karpenter"
-#   namespace        = "karpenter"
-#   create_namespace = true
-#   repository       = "oci://public.ecr.aws/karpenter"
-#   chart            = "karpenter"
-#   version          = var.karpenter_version
-#   wait             = true
-#   timeout          = 600
+resource "helm_release" "karpenter" {
+  name             = "karpenter"
+  namespace        = "karpenter"
+  create_namespace = true
+  repository       = "oci://public.ecr.aws/karpenter"
+  chart            = "karpenter"
+  version          = var.karpenter_version
+  wait             = true
+  timeout          = 600
 
-#   values = [yamlencode({
-#     settings = {
-#       clusterName = aws_eks_cluster.srjm-eks.name
-#     }
-#     serviceAccount = {
-#       annotations = {
-#         "eks.amazonaws.com/role-arn" = aws_iam_role.karpenter.arn
-#       }
-#     }
-#     controller = {
-#       resources = {
-#         requests = {
-#           cpu    = "250m"
-#           memory = "512Mi"
-#         }
-#         limits = {
-#           cpu    = "1"
-#           memory = "1Gi"
-#         }
-#       }
-#     }
-#   })]
+  values = [yamlencode({
+    settings = {
+      clusterName = aws_eks_cluster.srjm-eks.name
+    }
+    serviceAccount = {
+      annotations = {
+        "eks.amazonaws.com/role-arn" = aws_iam_role.karpenter.arn
+      }
+    }
+    controller = {
+      resources = {
+        requests = {
+          cpu    = "250m"
+          memory = "512Mi"
+        }
+        limits = {
+          cpu    = "1"
+          memory = "1Gi"
+        }
+      }
+    }
+  })]
 
-#   depends_on = [
-#     helm_release.karpenter_crd,
-#     aws_iam_role_policy_attachment.karpenter,
-#     aws_eks_access_entry.karpenter_nodes
-#   ]
-# }
+  depends_on = [
+    helm_release.karpenter_crd,
+    aws_iam_role_policy_attachment.karpenter,
+    aws_eks_access_entry.karpenter_nodes
+  ]
+}
