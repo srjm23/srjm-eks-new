@@ -37,6 +37,36 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v6
 
+      - name: Diagnosticar identidade OIDC (sem expor token)
+        shell: bash
+        run: |
+          python3 - <<'PYTHON'
+          import base64
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+
+          url = urllib.parse.urlsplit(os.environ["ACTIONS_ID_TOKEN_REQUEST_URL"])
+          query = urllib.parse.parse_qs(url.query)
+          query["audience"] = ["sts.amazonaws.com"]
+          endpoint = urllib.parse.urlunsplit(url._replace(
+              query=urllib.parse.urlencode(query, doseq=True)))
+          request = urllib.request.Request(endpoint, headers={
+              "Authorization": "Bearer " + os.environ["ACTIONS_ID_TOKEN_REQUEST_TOKEN"]
+          })
+          try:
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  token = json.load(response)["value"]
+              payload = token.split(".")[1]
+              claims = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
+          except Exception:
+              raise SystemExit("Falha ao obter os campos OIDC; resposta e token omitidos.") from None
+          for key in ("iss", "aud", "sub", "repository", "repository_id",
+                      "repository_owner_id", "ref", "environment", "event_name"):
+              print(key + "=" + json.dumps(claims.get(key)))
+          PYTHON
+
       - name: Configurar credenciais AWS via OIDC
         uses: aws-actions/configure-aws-credentials@v6
         with:
@@ -84,6 +114,36 @@ jobs:
     steps:
       - name: Checkout do código
         uses: actions/checkout@v6
+
+      - name: Diagnosticar identidade OIDC (sem expor token)
+        shell: bash
+        run: |
+          python3 - <<'PYTHON'
+          import base64
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+
+          url = urllib.parse.urlsplit(os.environ["ACTIONS_ID_TOKEN_REQUEST_URL"])
+          query = urllib.parse.parse_qs(url.query)
+          query["audience"] = ["sts.amazonaws.com"]
+          endpoint = urllib.parse.urlunsplit(url._replace(
+              query=urllib.parse.urlencode(query, doseq=True)))
+          request = urllib.request.Request(endpoint, headers={
+              "Authorization": "Bearer " + os.environ["ACTIONS_ID_TOKEN_REQUEST_TOKEN"]
+          })
+          try:
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  token = json.load(response)["value"]
+              payload = token.split(".")[1]
+              claims = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
+          except Exception:
+              raise SystemExit("Falha ao obter os campos OIDC; resposta e token omitidos.") from None
+          for key in ("iss", "aud", "sub", "repository", "repository_id",
+                      "repository_owner_id", "ref", "environment", "event_name"):
+              print(key + "=" + json.dumps(claims.get(key)))
+          PYTHON
 
       - name: Configurar credenciais AWS via OIDC
         uses: aws-actions/configure-aws-credentials@v6

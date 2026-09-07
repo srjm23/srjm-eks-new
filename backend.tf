@@ -1,7 +1,7 @@
-# terraform {
-#   backend "s3" {
-#     bucket  = "eks-sjrm-tfstate"
-#     key     = "eks-srjm/terraform.tfstate"
-#     encrypt = true
-#   }
-# }
+terraform {
+  backend "s3" {
+    bucket  = "jsbeserra-tfstates"
+    key     = "eks/terraform.tfstate"
+    encrypt = true
+  }
+}
