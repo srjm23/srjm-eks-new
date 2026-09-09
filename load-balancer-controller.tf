@@ -31,8 +31,8 @@ resource "aws_iam_role" "load_balancer_controller" {
 resource "aws_iam_policy" "load_balancer_controller" {
   name        = "${var.cluster_name}-load-balancer-controller"
   description = "Permissões do AWS Load Balancer Controller no cluster ${var.cluster_name}"
-  policy = file("${path.module}/policies/load-balancer-controller.json")
-  tags   = local.common_tags
+  policy      = file("${path.module}/policies/load-balancer-controller.json")
+  tags        = local.common_tags
 }
 
 resource "aws_iam_role_policy_attachment" "load_balancer_controller" {
