@@ -33,6 +33,12 @@ variable "karpenter_version" {
   default = "1.11.1"
 }
 
+variable "load_balancer_controller_chart_version" {
+  description = "Versão do chart Helm (3.5.0 instala o controller v3.5.0). Ao atualizar, revisar também a policy IAM em policies/load-balancer-controller.json."
+  type        = string
+  default     = "3.5.0"
+}
+
 variable "vpc_cidr" {
   type    = string
   default = "10.0.0.0/16"
