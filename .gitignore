@@ -7,6 +7,9 @@
 # permite Terraform
 !*.tf
 
+# Policy IAM utilizada pelo Terraform
+!/policies/load-balancer-controller.json
+
 # permite YAML
 !*.yaml
 !*.yml
